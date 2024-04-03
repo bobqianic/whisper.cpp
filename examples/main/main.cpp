@@ -694,18 +694,24 @@ bool output_json(
 
                     if (full) {
                         start_arr("tokens");
+                        std::string buffer;
                         const int n = whisper_full_n_tokens(ctx, i);
                         for (int j = 0; j < n; ++j) {
+                            buffer += whisper_full_get_token_text(ctx, i, j);
                             auto token = whisper_full_get_token_data(ctx, i, j);
-                            start_obj(nullptr);
-                                value_s("text", whisper_token_to_str(ctx, token.id), false);
-                                if(token.t0 > -1 && token.t1 > -1) {
-                                    // If we have per-token timestamps, write them out
-                                    times_o(token.t0, token.t1, false);
-                                }
-                                value_i("id", token.id, false);
-                                value_f("p", token.p, true);
-                            end_obj(j == (n - 1));
+                            if (whisper_utf8_is_valid(buffer.c_str())) {
+                                start_obj(nullptr);
+                                    value_s("text", buffer.c_str(), false);
+                                    buffer.clear();
+                                    if (token.t0 > -1 && token.t1 > -1)
+                                    {
+                                        // If we have per-token timestamps, write them out
+                                        times_o(token.t0, token.t1, false);
+                                    }
+                                    value_i("id", token.id, false);
+                                    value_f("p", token.p, true);
+                                end_obj(j == (n - 1));
+                            }
                         }
                         end_arr(!params.diarize && !params.tinydiarize);
                     }
